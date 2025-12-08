@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WTab - 新标签页</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- 背景层 -->
+    <div class="background" id="background"></div>
+    <div class="background-overlay"></div>
+    
+    <!-- 顶部工具栏 -->
+    <div class="top-bar">
+      <div class="top-bar-left">
+        <button class="toolbar-btn" id="bookmarksBtn" title="收藏夹">📚</button>
+      </div>
+      <div class="top-bar-right">
+        <button class="toolbar-btn" id="settingsBtn" title="设置">⚙️</button>
+      </div>
+    </div>
+    
+    <!-- 内容层 -->
+    <div class="content">
+      <!-- 搜索框 -->
+      <div class="search-container">
+        <div class="search-box">
+          <div class="search-icon">🔍</div>
+          <input 
+            type="text" 
+            class="search-input" 
+            id="searchInput" 
+            placeholder="搜索网页"
+            autocomplete="off"
+          >
+          <button class="search-engine-btn" id="searchEngineBtn" title="切换搜索引擎">
+            <span id="searchEngineText">Bing</span>
+            <span class="dropdown-arrow">▼</span>
+          </button>
+        </div>
+        <!-- 搜索引擎下拉菜单 -->
+        <div class="search-engine-menu" id="searchEngineMenu">
+          <div class="search-engine-option" data-value="google">Google</div>
+          <div class="search-engine-option" data-value="bing">Bing</div>
+          <div class="search-engine-option" data-value="baidu">百度</div>
+          <div class="search-engine-option" data-value="duckduckgo">DuckDuckGo</div>
+          <div class="search-engine-option" data-value="yahoo">Yahoo</div>
+        </div>
+      </div>
+      
+      <!-- 快速链接区域 -->
+      <div class="quick-links-section">
+        <div class="quick-links-header">
+          <h2>快速链接</h2>
+          <button class="add-link-btn" id="addBookmarkBtn" title="添加快捷方式">+</button>
+        </div>
+        <div class="quick-links-grid" id="bookmarksGrid">
+          <!-- 快速链接将动态添加到这里 -->
+        </div>
+      </div>
+    </div>
+    
+    <!-- 设置面板 -->
+    <div class="settings-panel" id="settingsPanel">
+      <div class="settings-content">
+        <div class="settings-header">
+          <h2>设置</h2>
+          <button class="close-btn" id="closeSettingsBtn">×</button>
+        </div>
+        
+        <div class="settings-section">
+          <h3>背景设置</h3>
+          <div class="background-options">
+            <label>
+              <input type="radio" name="background" value="bing" checked>
+              Bing 每日图片
+            </label>
+            
+            <label>
+              <input type="radio" name="background" value="color">
+              纯色背景
+            </label>
+            <input type="color" id="backgroundColorPicker" value="#0078d4">
+            
+            <label>
+              <input type="radio" name="background" value="preset">
+              预设图片
+            </label>
+            <div class="preset-images-grid" id="presetImagesGrid">
+              <!-- 预设图片将动态添加到这里 -->
+            </div>
+            
+            <label>
+              <input type="radio" name="background" value="image">
+              自定义图片
+            </label>
+            <input type="file" id="backgroundImageInput" accept="image/*" style="display: none;">
+            <button class="upload-btn" id="uploadImageBtn">上传图片</button>
+            
+            <label>
+              <input type="radio" name="background" value="gradient">
+              渐变背景
+            </label>
+            <div class="gradient-controls">
+              <input type="color" id="gradientColor1" value="#0078d4">
+              <input type="color" id="gradientColor2" value="#106ebe">
+            </div>
+          </div>
+        </div>
+        
+        <div class="settings-section">
+          <h3>默认搜索引擎</h3>
+          <select id="defaultSearchEngine" class="settings-select">
+            <option value="google">Google</option>
+            <option value="bing">Bing</option>
+            <option value="baidu">百度</option>
+            <option value="duckduckgo">DuckDuckGo</option>
+            <option value="yahoo">Yahoo</option>
+          </select>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 添加快速链接对话框 -->
+    <div class="modal" id="addBookmarkModal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2>添加快捷方式</h2>
+          <button class="close-btn" id="closeBookmarkModalBtn">×</button>
+        </div>
+        <div class="modal-body">
+          <label>
+            名称
+            <input type="text" id="bookmarkName" placeholder="例如：GitHub">
+          </label>
+          <label>
+            网址
+            <input type="text" id="bookmarkUrl" placeholder="例如：https://github.com">
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button class="btn btn-cancel" id="cancelBookmarkBtn">取消</button>
+          <button class="btn btn-primary" id="saveBookmarkBtn">添加</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="script.js"></script>
+</body>
+</html>
+
