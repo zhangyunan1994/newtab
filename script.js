@@ -61,14 +61,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initBookmarks();
   initSettings();
   
-  // 收藏夹按钮（暂时保留，可以后续扩展功能）
-  const bookmarksBtn = document.getElementById('bookmarksBtn');
-  if (bookmarksBtn) {
-    bookmarksBtn.addEventListener('click', () => {
-      // 可以在这里添加打开浏览器收藏夹的功能
-      // chrome.bookmarks.getTree() 需要 bookmarks 权限
-    });
-  }
+  // 收藏夹按钮
+  initBookmarksPanel();
 });
 
 // 搜索功能
@@ -254,9 +248,10 @@ function applyBackground(type, value) {
       chrome.storage.sync.set({
         backgroundType: 'preset',
         presetBackgroundId: value
+      }, () => {
+        // 更新预设图片选中状态
+        updatePresetImagesSelection(value);
       });
-      // 更新预设图片选中状态
-      updatePresetImagesSelection(value);
     }
   } else if (type === 'color') {
     background.classList.remove('background-image');
@@ -302,7 +297,7 @@ function initPresetImages() {
   
   presetImagesGrid.innerHTML = '';
   
-  presetBackgrounds.forEach(preset => {
+  presetBackgrounds.forEach((preset, index) => {
     const item = document.createElement('div');
     item.className = 'preset-image-item';
     item.dataset.presetId = preset.id;
@@ -312,15 +307,20 @@ function initPresetImages() {
       <div class="preset-name">${preset.name}</div>
     `;
     
-    item.addEventListener('click', () => {
+    item.addEventListener('click', function(e) {
+      e.stopPropagation();
+      
+      const clickedPresetId = this.dataset.presetId;
+      console.log('点击预设图片:', clickedPresetId, preset.name);
+      
       // 选中预设图片选项
       const presetRadio = document.querySelector('input[name="background"][value="preset"]');
       if (presetRadio) {
         presetRadio.checked = true;
-        // 触发change事件以确保其他逻辑也能执行
-        presetRadio.dispatchEvent(new Event('change'));
       }
-      applyBackground('preset', preset.id);
+      
+      // 直接应用选中的预设图片
+      applyBackground('preset', clickedPresetId);
     });
     
     presetImagesGrid.appendChild(item);
@@ -567,5 +567,128 @@ function initSettings() {
       settingsPanel.classList.remove('active');
     }
   });
+}
+
+// 收藏夹面板
+function initBookmarksPanel() {
+  const bookmarksBtn = document.getElementById('bookmarksBtn');
+  const bookmarksPanel = document.getElementById('bookmarksPanel');
+  const closeBookmarksPanelBtn = document.getElementById('closeBookmarksPanelBtn');
+  
+  if (!bookmarksBtn || !bookmarksPanel) return;
+  
+  // 打开收藏夹面板
+  bookmarksBtn.addEventListener('click', () => {
+    bookmarksPanel.classList.add('active');
+    loadBrowserBookmarks();
+  });
+  
+  // 关闭收藏夹面板
+  if (closeBookmarksPanelBtn) {
+    closeBookmarksPanelBtn.addEventListener('click', () => {
+      bookmarksPanel.classList.remove('active');
+    });
+  }
+  
+  // 点击面板外部关闭
+  bookmarksPanel.addEventListener('click', (e) => {
+    if (e.target === bookmarksPanel) {
+      bookmarksPanel.classList.remove('active');
+    }
+  });
+}
+
+// 加载浏览器收藏夹
+function loadBrowserBookmarks() {
+  const bookmarksList = document.getElementById('bookmarksList');
+  if (!bookmarksList) return;
+  
+  bookmarksList.innerHTML = '<div class="loading">加载中...</div>';
+  
+  // 检查是否有bookmarks权限
+  if (!chrome.bookmarks) {
+    bookmarksList.innerHTML = '<div class="empty-bookmarks">无法访问收藏夹，请检查扩展权限</div>';
+    return;
+  }
+  
+  chrome.bookmarks.getTree((bookmarkTreeNodes) => {
+    if (chrome.runtime.lastError) {
+      bookmarksList.innerHTML = '<div class="empty-bookmarks">无法加载收藏夹</div>';
+      return;
+    }
+    
+    bookmarksList.innerHTML = '';
+    
+    // 处理根节点
+    if (bookmarkTreeNodes && bookmarkTreeNodes.length > 0) {
+      const root = bookmarkTreeNodes[0];
+      if (root.children) {
+        root.children.forEach(child => {
+          if (child.url) {
+            // 直接的书签
+            const bookmarkItem = createBookmarkItem(child);
+            bookmarksList.appendChild(bookmarkItem);
+          } else if (child.children && child.children.length > 0) {
+            // 文件夹
+            const folder = createBookmarkFolder(child);
+            bookmarksList.appendChild(folder);
+          }
+        });
+      }
+    }
+    
+    if (bookmarksList.children.length === 0) {
+      bookmarksList.innerHTML = '<div class="empty-bookmarks">暂无收藏夹</div>';
+    }
+  });
+}
+
+// 创建收藏夹项
+function createBookmarkItem(bookmark) {
+  const item = document.createElement('a');
+  item.className = 'bookmark-item-link';
+  item.href = bookmark.url;
+  item.target = '_blank';
+  
+  let domain = '';
+  try {
+    domain = new URL(bookmark.url).hostname;
+  } catch (e) {
+    domain = bookmark.url;
+  }
+  const faviconUrl = `https://www.google.com/s2/favicons?domain=${domain}&sz=16`;
+  
+  item.innerHTML = `
+    <img src="${faviconUrl}" alt="" class="bookmark-item-icon" onerror="this.style.display='none'">
+    <div class="bookmark-item-title">${bookmark.title || '未命名'}</div>
+    <div class="bookmark-item-url">${domain}</div>
+  `;
+  
+  return item;
+}
+
+// 创建收藏夹文件夹
+function createBookmarkFolder(folder) {
+  const folderDiv = document.createElement('div');
+  folderDiv.className = 'bookmark-folder';
+  
+  const title = document.createElement('div');
+  title.className = 'bookmark-folder-title';
+  title.textContent = folder.title || '未命名文件夹';
+  
+  const itemList = document.createElement('div');
+  itemList.className = 'bookmark-item-list';
+  
+  // 只显示前20个书签，避免列表过长
+  const bookmarks = folder.children.filter(child => child.url).slice(0, 20);
+  bookmarks.forEach(bookmark => {
+    const bookmarkItem = createBookmarkItem(bookmark);
+    itemList.appendChild(bookmarkItem);
+  });
+  
+  folderDiv.appendChild(title);
+  folderDiv.appendChild(itemList);
+  
+  return folderDiv;
 }
 

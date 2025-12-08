@@ -327,6 +327,121 @@ body {
   transform: scale(1.1);
 }
 
+/* 收藏夹面板 */
+.bookmarks-panel {
+  position: fixed;
+  top: 0;
+  left: -400px;
+  width: 400px;
+  height: 100vh;
+  background: white;
+  box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
+  transition: left 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+.bookmarks-panel.active {
+  left: 0;
+}
+
+.panel-content {
+  padding: 24px;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.panel-header h2 {
+  font-size: 20px;
+  color: #333;
+  font-weight: 500;
+}
+
+.bookmarks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.bookmark-folder {
+  margin-bottom: 16px;
+}
+
+.bookmark-folder-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #666;
+  margin-bottom: 8px;
+  padding: 8px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.bookmark-item-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.bookmark-item-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  color: #333;
+  transition: background 0.2s ease;
+  cursor: pointer;
+}
+
+.bookmark-item-link:hover {
+  background: #f5f5f5;
+}
+
+.bookmark-item-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.bookmark-item-title {
+  flex: 1;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bookmark-item-url {
+  font-size: 12px;
+  color: #999;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 200px;
+}
+
+.loading {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
+.empty-bookmarks {
+  text-align: center;
+  color: #999;
+  padding: 40px 0;
+  font-size: 14px;
+}
+
 /* 设置面板 */
 .settings-panel {
   position: fixed;
@@ -453,6 +568,9 @@ body {
   cursor: pointer;
   border: 2px solid transparent;
   transition: all 0.2s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  pointer-events: auto;
 }
 
 .preset-image-item:hover {
@@ -469,6 +587,9 @@ body {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .preset-image-item .preset-name {
@@ -481,6 +602,9 @@ body {
   padding: 8px;
   font-size: 12px;
   text-align: center;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
 }
 
 .gradient-controls {
