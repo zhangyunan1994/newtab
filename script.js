@@ -7,7 +7,7 @@ const searchEngines = {
   },
   bing: {
     name: 'Bing',
-    url: 'https://www.bing.com/search?q=',
+    url: 'https://cn.bing.com/search?q=',
     icon: '🔎'
   },
   baidu: {
@@ -63,6 +63,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // 收藏夹按钮
   initBookmarksPanel();
+  
+  // Todo 列表
+  initTodoList();
 });
 
 // 搜索功能
@@ -690,5 +693,371 @@ function createBookmarkFolder(folder) {
   folderDiv.appendChild(itemList);
   
   return folderDiv;
+}
+
+// Todo 列表功能
+function initTodoList() {
+  const todoBtn = document.getElementById('todoBtn');
+  const todoPanel = document.getElementById('todoPanel');
+  const closeTodoPanelBtn = document.getElementById('closeTodoPanelBtn');
+  const addTodoBtn = document.getElementById('addTodoBtn');
+  const addTodoModal = document.getElementById('addTodoModal');
+  const closeTodoModalBtn = document.getElementById('closeTodoModalBtn');
+  const cancelTodoBtn = document.getElementById('cancelTodoBtn');
+  const saveTodoBtn = document.getElementById('saveTodoBtn');
+  
+  // 打开 Todo 面板
+  if (todoBtn) {
+    todoBtn.addEventListener('click', () => {
+      todoPanel.classList.add('active');
+      loadTodos();
+    });
+  }
+  
+  // 关闭 Todo 面板
+  if (closeTodoPanelBtn) {
+    closeTodoPanelBtn.addEventListener('click', () => {
+      todoPanel.classList.remove('active');
+    });
+  }
+  
+  // 点击面板外部关闭
+  if (todoPanel) {
+    todoPanel.addEventListener('click', (e) => {
+      if (e.target === todoPanel) {
+        todoPanel.classList.remove('active');
+      }
+    });
+  }
+  
+  // 打开添加 Todo 模态框
+  if (addTodoBtn) {
+    addTodoBtn.addEventListener('click', () => {
+      openTodoModal();
+    });
+  }
+  
+  // 关闭 Todo 模态框
+  if (closeTodoModalBtn) {
+    closeTodoModalBtn.addEventListener('click', () => {
+      addTodoModal.classList.remove('active');
+      resetTodoForm();
+    });
+  }
+  
+  if (cancelTodoBtn) {
+    cancelTodoBtn.addEventListener('click', () => {
+      addTodoModal.classList.remove('active');
+      resetTodoForm();
+    });
+  }
+  
+  // 点击模态框外部关闭
+  if (addTodoModal) {
+    addTodoModal.addEventListener('click', (e) => {
+      if (e.target === addTodoModal) {
+        addTodoModal.classList.remove('active');
+        resetTodoForm();
+      }
+    });
+  }
+  
+  // 保存 Todo
+  if (saveTodoBtn) {
+    saveTodoBtn.addEventListener('click', () => {
+      saveTodo();
+    });
+  }
+  
+  // 加载初始 Todo 列表
+  loadTodos();
+}
+
+function loadTodos() {
+  const todoList = document.getElementById('todoList');
+  if (!todoList) return;
+  
+  chrome.storage.sync.get(['todos'], (result) => {
+    const todos = result.todos || [];
+    
+    if (todos.length === 0) {
+      todoList.innerHTML = '<div class="empty-todos">暂无待办事项</div>';
+      return;
+    }
+    
+    // 按创建时间倒序排列
+    todos.sort((a, b) => {
+      const timeA = a.createdAt || 0;
+      const timeB = b.createdAt || 0;
+      return timeB - timeA;
+    });
+    
+    todoList.innerHTML = '';
+    
+    todos.forEach((todo, index) => {
+      const todoItem = createTodoElement(todo, index);
+      todoList.appendChild(todoItem);
+    });
+  });
+}
+
+function createTodoElement(todo, index) {
+  const item = document.createElement('div');
+  item.className = 'todo-item';
+  
+  // 检查任务状态
+  const now = new Date().getTime();
+  const startTime = todo.startTime ? new Date(todo.startTime).getTime() : null;
+  const endTime = todo.endTime ? new Date(todo.endTime).getTime() : null;
+  
+  let statusClass = '';
+  let statusText = '';
+  
+  if (todo.completed) {
+    statusClass = 'completed';
+    statusText = '已完成';
+  } else if (endTime && now > endTime) {
+    statusClass = 'overdue';
+    statusText = '已过期';
+  } else if (startTime && now < startTime) {
+    statusClass = 'upcoming';
+    statusText = '未开始';
+  } else if (startTime && endTime && now >= startTime && now <= endTime) {
+    statusClass = 'in-progress';
+    statusText = '进行中';
+  } else {
+    statusClass = 'pending';
+    statusText = '待处理';
+  }
+  
+  item.classList.add(statusClass);
+  
+  const startTimeStr = todo.startTime ? formatDateTime(todo.startTime) : '未设置';
+  const endTimeStr = todo.endTime ? formatDateTime(todo.endTime) : '未设置';
+  
+  item.innerHTML = `
+    <div class="todo-item-header">
+      <div class="todo-item-title">${escapeHtml(todo.title || '未命名任务')}</div>
+      <div class="todo-item-actions">
+        <button class="todo-action-btn todo-edit-btn" data-index="${index}" title="编辑">✏️</button>
+        <button class="todo-action-btn todo-delete-btn" data-index="${index}" title="删除">🗑️</button>
+      </div>
+    </div>
+    ${todo.description ? `<div class="todo-item-description">${escapeHtml(todo.description)}</div>` : ''}
+    <div class="todo-item-time">
+      <div class="todo-time-item">
+        <span class="todo-time-label">开始：</span>
+        <span class="todo-time-value">${startTimeStr}</span>
+      </div>
+      <div class="todo-time-item">
+        <span class="todo-time-label">结束：</span>
+        <span class="todo-time-value">${endTimeStr}</span>
+      </div>
+    </div>
+    <div class="todo-item-status">
+      <span class="status-badge ${statusClass}">${statusText}</span>
+      ${!todo.completed ? `<button class="todo-complete-btn" data-index="${index}">标记为完成</button>` : ''}
+    </div>
+  `;
+  
+  // 编辑按钮
+  const editBtn = item.querySelector('.todo-edit-btn');
+  if (editBtn) {
+    editBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      editTodo(index);
+    });
+  }
+  
+  // 删除按钮
+  const deleteBtn = item.querySelector('.todo-delete-btn');
+  if (deleteBtn) {
+    deleteBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteTodo(index);
+    });
+  }
+  
+  // 完成按钮
+  const completeBtn = item.querySelector('.todo-complete-btn');
+  if (completeBtn) {
+    completeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleTodoComplete(index);
+    });
+  }
+  
+  return item;
+}
+
+function formatDateTime(dateTimeString) {
+  if (!dateTimeString) return '未设置';
+  
+  const date = new Date(dateTimeString);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day} ${hours}:${minutes}`;
+}
+
+function escapeHtml(text) {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function openTodoModal(todoIndex = null) {
+  const modal = document.getElementById('addTodoModal');
+  const modalTitle = document.getElementById('todoModalTitle');
+  const titleInput = document.getElementById('todoTitle');
+  const descriptionInput = document.getElementById('todoDescription');
+  const startTimeInput = document.getElementById('todoStartTime');
+  const endTimeInput = document.getElementById('todoEndTime');
+  
+  if (todoIndex !== null) {
+    // 编辑模式
+    modalTitle.textContent = '编辑任务';
+    chrome.storage.sync.get(['todos'], (result) => {
+      const todos = result.todos || [];
+      const todo = todos[todoIndex];
+      
+      if (todo) {
+        titleInput.value = todo.title || '';
+        descriptionInput.value = todo.description || '';
+        
+        // 转换时间格式为 datetime-local 需要的格式 (YYYY-MM-DDTHH:mm)
+        if (todo.startTime) {
+          const startDate = new Date(todo.startTime);
+          startTimeInput.value = formatDateTimeLocal(startDate);
+        } else {
+          startTimeInput.value = '';
+        }
+        
+        if (todo.endTime) {
+          const endDate = new Date(todo.endTime);
+          endTimeInput.value = formatDateTimeLocal(endDate);
+        } else {
+          endTimeInput.value = '';
+        }
+        
+        // 保存当前编辑的索引
+        modal.dataset.editIndex = todoIndex;
+      }
+    });
+  } else {
+    // 添加模式
+    modalTitle.textContent = '添加任务';
+    resetTodoForm();
+    delete modal.dataset.editIndex;
+  }
+  
+  modal.classList.add('active');
+}
+
+function formatDateTimeLocal(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+  
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function resetTodoForm() {
+  document.getElementById('todoTitle').value = '';
+  document.getElementById('todoDescription').value = '';
+  document.getElementById('todoStartTime').value = '';
+  document.getElementById('todoEndTime').value = '';
+}
+
+function editTodo(index) {
+  openTodoModal(index);
+}
+
+function saveTodo() {
+  const modal = document.getElementById('addTodoModal');
+  const title = document.getElementById('todoTitle').value.trim();
+  const description = document.getElementById('todoDescription').value.trim();
+  const startTime = document.getElementById('todoStartTime').value;
+  const endTime = document.getElementById('todoEndTime').value;
+  const editIndex = modal.dataset.editIndex;
+  
+  if (!title) {
+    alert('请输入任务标题');
+    return;
+  }
+  
+  // 验证时间
+  if (startTime && endTime) {
+    const start = new Date(startTime).getTime();
+    const end = new Date(endTime).getTime();
+    
+    if (start >= end) {
+      alert('结束时间必须晚于开始时间');
+      return;
+    }
+  }
+  
+  chrome.storage.sync.get(['todos'], (result) => {
+    const todos = result.todos || [];
+    
+    const todoData = {
+      title,
+      description,
+      startTime: startTime || null,
+      endTime: endTime || null,
+      completed: false,
+      createdAt: Date.now()
+    };
+    
+    if (editIndex !== undefined) {
+      // 编辑模式：保留原有的创建时间和完成状态
+      const existingTodo = todos[editIndex];
+      if (existingTodo) {
+        todoData.createdAt = existingTodo.createdAt;
+        todoData.completed = existingTodo.completed;
+      }
+      todos[editIndex] = todoData;
+    } else {
+      // 添加模式
+      todos.push(todoData);
+    }
+    
+    chrome.storage.sync.set({ todos }, () => {
+      loadTodos();
+      modal.classList.remove('active');
+      resetTodoForm();
+    });
+  });
+}
+
+function deleteTodo(index) {
+  if (!confirm('确定要删除这个任务吗？')) {
+    return;
+  }
+  
+  chrome.storage.sync.get(['todos'], (result) => {
+    const todos = result.todos || [];
+    todos.splice(index, 1);
+    chrome.storage.sync.set({ todos }, () => {
+      loadTodos();
+    });
+  });
+}
+
+function toggleTodoComplete(index) {
+  chrome.storage.sync.get(['todos'], (result) => {
+    const todos = result.todos || [];
+    if (todos[index]) {
+      todos[index].completed = !todos[index].completed;
+      chrome.storage.sync.set({ todos }, () => {
+        loadTodos();
+      });
+    }
+  });
 }
 
